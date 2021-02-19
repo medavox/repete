@@ -11,7 +11,6 @@ import java.lang.StringBuilder
 class DiscordBot(private val selfUser:SelfUser) : ListenerAdapter() {
     private val DISCORD_MAX_MESSAGE_LENGTH = 2000
     private var output = StringBuilder()
-    private val backend = Functionality(steamWebApiKey) { output.appendln(it) }
 
     /**Discord doesn't allow a single message to be longer than 2000 characters.
      * This function splits all messages into chunks smaller than that
@@ -78,43 +77,12 @@ class DiscordBot(private val selfUser:SelfUser) : ListenerAdapter() {
         }
     }
 
-    private fun sgicCommand(arguments:Array<String>):String {
-        if(arguments.size < 2) {
-            return "please specify at least 2 steam IDs."
-        }
-        return try {
-            val playerIDs = backend.sanitiseInputIds(*arguments)
-            if(playerIDs.isNotEmpty()) backend.steamGamesInCommon(playerIDs)
-            output.toString()
-        } catch(e:MultiException) {
-            output.clear()
-            e.exceptions.mapNotNull {it.message}.forEach { output.appendln("ERROR: $it") }
-            output.toString()
-        }
-    }
-
-    private fun friendsOfCommand(arguments:Array<String>):String {
-        if(arguments.isEmpty()) {
-            return "please specify at least 1 steam ID."
-        }
-        return try {
-            val playerIDs = backend.sanitiseInputIds(*arguments)
-            if(playerIDs.isNotEmpty()) backend.friendsOf(playerIDs)
-            "```\n${output.toString()}\n```"
-        } catch(e:MultiException) {
-            output.clear()
-            e.exceptions.mapNotNull {it.message}.forEach { output.appendln("ERROR: $it") }
-            output.toString()
-        }
-    }
 
     private fun handleCommand(msg:Message, channel:MessageChannel) {
         output.clear()
         //println("raw message: ${msg.contentRaw}")
         try {
             val funToRun:(Array<String>) -> String = with(msg.contentRaw.toLowerCase()) { when {
-                contains("sgic ") -> ::sgicCommand
-                contains("friends ") -> ::friendsOfCommand
                 contains("help") -> { _ -> helpText }
                 else -> { _ -> "command not recognised. Try `sgic`, `friends` or `help`"}
             }}
